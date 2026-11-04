@@ -1,0 +1,7 @@
+{
+  "nodes": [
+    {"name": "head", "host": "192.168.50.10", "port": 8000},
+    {"name": "worker-a", "host": "192.168.50.11", "port": 8000},
+    {"name": "worker-b", "host": "192.168.50.12", "port": 8000}
+  ]
+}
