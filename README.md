@@ -1,5 +1,5 @@
+# Cluster of local LLMs without a GPU
 <div align="center">
-  # Cluster of local LLMs without a GPU
   <img src="assets/cluster/hero.svg" width="100%" alt="CPU-only local LLM cluster: three desktop nodes, FastAPI gateway, 24 logical CPU threads and a historical aggregate throughput measurement." />
 
   <p>
