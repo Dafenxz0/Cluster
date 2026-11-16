@@ -6,6 +6,9 @@
 [English](README.md) · [Arquitectura](#arquitectura) · [Rendimiento](#resultados) · [Experimentos](#experimentos) · [Ejecutar demo](#reproducir-la-api-de-ejemplo)
 </div>
 
+> [!NOTE]
+> The six SVG visuals in `assets/cluster/` were redesigned as a monochrome editorial set with white technical linework and dark fluorescent green highlights.
+
 > [!IMPORTANT]
 > Este repositorio es **un caso de estudio histórico**. Los resultados se registraron en septiembre de 2026. El código de `api/` se reconstruyó y saneó para enseñar la arquitectura; **no es el archivo exacto del servidor desplegado**. El parche DeepSeek sí se recuperó del experimento original, pero todavía no se ha validado mediante una conversión completa.
 

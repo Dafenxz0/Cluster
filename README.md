@@ -25,6 +25,9 @@
   </p>
 </div>
 
+> [!NOTE]
+> The six SVG visuals in `assets/cluster/` were redesigned as a monochrome editorial set with white technical linework and dark fluorescent green highlights.
+
 > [!IMPORTANT]
 > **This is an archived systems case study, not a running public inference service.** The September 2026 measurements come from retained project notes. The `api/` code is a **sanitized reference reconstruction**, not the exact original deployment; the recovered DeepSeek patch is real but **not validated end-to-end**. No weights, credentials, institutional hostnames or private infrastructure details are published.
 
@@ -178,7 +181,7 @@ bash -n scripts/*.sh
 Cluster/
 ├── README.md                        ← This case study
 ├── README.es.md                     ← Spanish version
-├── assets/cluster/                  ← Original SVG diagrams and chart data
+├── assets/cluster/                  ← Figma-designed editorial SVG diagrams and chart data
 │   ├── hero.svg
 │   ├── overview.svg
 │   ├── architecture.svg
