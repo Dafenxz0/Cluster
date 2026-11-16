@@ -1,0 +1,115 @@
+--- a/conversion/deepseek.py
++++ b/conversion/deepseek.py
+@@ -556,6 +556,14 @@
+         self._dsv4_bf16_tensors: set[str] = set()
+         self._dsv4_f32_tensors: set[str] = set()
+         self._dsv4_mxfp4_generated = False
++
++        # Some DeepSeek-V4 replicas (for example the mini models)
++        # store routed experts in BF16/FP16 and do not have MXFP4 .scale tensors.
++        self._dsv4_source_mxfp4 = any(
++            ".ffn.experts." in name and name.endswith(".scale")
++            for name in self.model_tensors
++        )
++
+         self._collect_source_dtypes()
+ 
+         if type(self)._skipped_mtp_tensors:
+@@ -718,6 +726,45 @@
+         for name in tensors_to_remove:
+             del self.model_tensors[name]
+ 
++    def _stack_unquantized_expert_tensor(self, bid: int, proj: str):
++        n_experts = self.hparams["n_routed_experts"]
++        tensors = []
++        consumed = []
++
++        for eid in range(n_experts):
++            weight_name = f"layers.{bid}.ffn.experts.{eid}.{proj}.weight"
++
++            if weight_name not in self.model_tensors:
++                raise KeyError(
++                    f"Missing routed expert tensor {weight_name}"
++                )
++
++            weight = LazyTorchTensor.to_eager(
++                self.model_tensors[weight_name]()
++            )
++
++            tensors.append(weight)
++            consumed.append(weight_name)
++
++        # [expert, out, in]
++        merged = torch.stack(tensors, dim=0)
++
++        # Synthetic source name. modify_tensors maps this to the
++        # normal GGUF expert tensor.
++        merged_name = (
++            f"layers.{bid}.ffn.experts_merged.{proj}.weight"
++        )
++
++        logger.info(
++            "%s: stacked %d unquantized routed experts, shape = %s",
++            merged_name,
++            n_experts,
++            tuple(merged.shape),
++        )
++
++        return merged_name, merged, consumed
++
++
+     def _write_mxfp4_expert_tensor(self, bid: int, proj: str, tensor_key: gguf.MODEL_TENSOR) -> list[str]:
+         n_experts = self.hparams["n_routed_experts"]
+         data: np.ndarray | None = None
+@@ -780,9 +827,21 @@
+         for bid in range(self.block_count):
+             if self.mtp_only and bid < main_layers:
+                 continue
+-            consumed.extend(self._write_mxfp4_expert_tensor(bid, "w1", gguf.MODEL_TENSOR.FFN_GATE_EXP))
+-            consumed.extend(self._write_mxfp4_expert_tensor(bid, "w2", gguf.MODEL_TENSOR.FFN_DOWN_EXP))
+-            consumed.extend(self._write_mxfp4_expert_tensor(bid, "w3", gguf.MODEL_TENSOR.FFN_UP_EXP))
++
++            if self._dsv4_source_mxfp4:
++                consumed.extend(self._write_mxfp4_expert_tensor(
++                    bid, "w1", gguf.MODEL_TENSOR.FFN_GATE_EXP))
++                consumed.extend(self._write_mxfp4_expert_tensor(
++                    bid, "w2", gguf.MODEL_TENSOR.FFN_DOWN_EXP))
++                consumed.extend(self._write_mxfp4_expert_tensor(
++                    bid, "w3", gguf.MODEL_TENSOR.FFN_UP_EXP))
++            else:
++                for proj in ("w1", "w2", "w3"):
++                    merged_name, merged, merged_consumed = (
++                        self._stack_unquantized_expert_tensor(bid, proj)
++                    )
++                    consumed.extend(merged_consumed)
++                    yield merged_name, merged
+ 
+         for bid in range(main_layers, self.block_count):
+             e_name = f"layers.{bid}.nextn.e_proj.weight"
+@@ -860,6 +919,11 @@
+             "ffn.shared_experts.w1.weight": (gguf.MODEL_TENSOR.FFN_GATE_SHEXP, ".weight"),
+             "ffn.shared_experts.w2.weight": (gguf.MODEL_TENSOR.FFN_DOWN_SHEXP, ".weight"),
+             "ffn.shared_experts.w3.weight": (gguf.MODEL_TENSOR.FFN_UP_SHEXP, ".weight"),
++
++            # BF16/FP16 DeepSeek-V4 mini replicas
++            "ffn.experts_merged.w1.weight": (gguf.MODEL_TENSOR.FFN_GATE_EXP, ".weight"),
++            "ffn.experts_merged.w2.weight": (gguf.MODEL_TENSOR.FFN_DOWN_EXP, ".weight"),
++            "ffn.experts_merged.w3.weight": (gguf.MODEL_TENSOR.FFN_UP_EXP, ".weight"),
+             "nextn.eh_proj.weight": (gguf.MODEL_TENSOR.NEXTN_EH_PROJ, ".weight"),
+             "nextn.enorm.weight": (gguf.MODEL_TENSOR.NEXTN_ENORM, ".weight"),
+             "nextn.hnorm.weight": (gguf.MODEL_TENSOR.NEXTN_HNORM, ".weight"),
+@@ -920,8 +984,12 @@
+ 
+     def prepare_tensors(self):
+         super().prepare_tensors()
+-        self._is_mxfp4 = True
+-        self.ftype = gguf.LlamaFileType.MOSTLY_MXFP4_MOE
++
++        # Official V4 MXFP4 models retain their special format.
++        # BF16/FP16 replicas retain the output type requested by the user.
++        if self._dsv4_source_mxfp4:
++            self._is_mxfp4 = True
++            self.ftype = gguf.LlamaFileType.MOSTLY_MXFP4_MOE
+ 
+ 
+ @ModelBase.register("DeepseekV4DSparkModel")
