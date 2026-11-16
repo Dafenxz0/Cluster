@@ -1,0 +1,8 @@
+recorded_date,nodes,concurrent_requests,aggregate_generated_tokens_per_second,value_is_approximate,source
+2026-09-21,2,1,9.4,yes,transcribed historical project notes; not raw telemetry
+2026-09-21,2,4,19.59,no,transcribed historical project notes; not raw telemetry
+2026-09-21,2,8,17.84,no,transcribed historical project notes; not raw telemetry
+2026-09-21,3,1,9.5,yes,transcribed historical project notes; not raw telemetry
+2026-09-21,3,6,33.22,no,transcribed historical project notes; not raw telemetry
+2026-09-21,3,9,32.02,no,transcribed historical project notes; not raw telemetry
+2026-09-21,3,12,34.92,no,transcribed historical project notes; not raw telemetry
